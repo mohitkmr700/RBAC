@@ -112,8 +112,8 @@ async login(loginDto: { email: string; password: string }) {
   
     return {
       message: 'Login successful',
-      user: userPayload,
       accessToken: token,
+      status: 200
     };
   }
   
