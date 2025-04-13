@@ -24,6 +24,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@supabase/supabase-js": "^2.49.4",
+    "class-validator": "^0.14.1",
     "dotenv": "^16.5.0",
     "jsonwebtoken": "^9.0.2",
     "reflect-metadata": "^0.2.2",
@@ -58,8 +59,8 @@
     "typescript-eslint": "^8.20.0"
   },
   "engines": {
-  "node": "16.x"
-},
+    "node": "16.x"
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",
