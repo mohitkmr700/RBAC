@@ -1,10 +1,27 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
 
 const env: number = parseInt(process.env.PORT || '4000', 10);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(env); // Make sure the application listens on port 3000
+  const logger = new Logger('HTTP');
+
+  // Add global logging middleware
+  app.use((req, res, next) => {
+    const { method, originalUrl } = req;
+    const startTime = Date.now();
+    
+    res.on('finish', () => {
+      const responseTime = Date.now() - startTime;
+      logger.log(`${method} ${originalUrl} ${res.statusCode} - ${responseTime}ms`);
+    });
+    
+    next();
+  });
+
+  await app.listen(env);
+  logger.log(`Application is running on: http://localhost:${env}`);
 }
 bootstrap();

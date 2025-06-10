@@ -7,41 +7,51 @@ import {
     ForbiddenException,
   } from '@nestjs/common';
   import { Reflector } from '@nestjs/core';
-  import * as jwt from 'jsonwebtoken'; // Use JWT for decoding
-  import { createClient } from '@supabase/supabase-js';
+  import { AuthService } from './auth.service';
+  import { JwtPayload } from 'jsonwebtoken';
   
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_SECRET_ROLE_KEY!
-  );
+  interface UserPayload extends JwtPayload {
+    id: string;
+    email: string;
+    role: string;
+    full_name: string;
+  }
   
   @Injectable()
   export class AuthGuard implements CanActivate {
-    constructor(private readonly reflector: Reflector) {}
+    constructor(
+      private readonly reflector: Reflector,
+      private readonly authService: AuthService,
+    ) {}
   
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const request = context.switchToHttp().getRequest();
       const authHeader = request.headers['authorization'];
   
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new UnauthorizedException('Missing or malformed token');
+      if (!authHeader) {
+        throw new UnauthorizedException('No authorization token provided');
+      }
+  
+      if (!authHeader.startsWith('Bearer ')) {
+        throw new UnauthorizedException('Invalid token format. Use Bearer token');
       }
   
       const token = authHeader.split(' ')[1];
   
-      try {
-        // Decode the JWT to get the user and role
-        const decoded: any = jwt.decode(token);
+      if (!token) {
+        throw new UnauthorizedException('Token is missing');
+      }
   
-        if (!decoded || !decoded.role) {
-          throw new UnauthorizedException('Invalid or expired token');
-        }
+      try {
+        // Verify and decode the token
+        const decoded = this.authService.verifyToken(token) as UserPayload;
   
         // Get roles from the route handler metadata
         const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
   
         // If no roles are required, allow access
         if (!requiredRoles) {
+          request.user = decoded;
           return true;
         }
   
@@ -51,9 +61,12 @@ import {
         }
   
         // If role matches, attach user data to the request
-        request['user'] = decoded; // Attach user data, including role
+        request.user = decoded;
         return true;
       } catch (error) {
+        if (error instanceof UnauthorizedException) {
+          throw error;
+        }
         throw new UnauthorizedException('Invalid or expired token');
       }
     }

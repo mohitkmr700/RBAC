@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { SignupDto } from './dto/signup.dto';
 import { supabase } from '../supabase/supabase.client';
 import * as dotenv from 'dotenv';
@@ -9,11 +9,33 @@ dotenv.config();
 
 @Injectable()
 export class AuthService {
-  async signup(dto: SignupDto) {
+  private readonly JWT_SECRET = process.env.JWT_SECRET!;
+  private readonly TOKEN_EXPIRY = '1h';
+
+  async signup(dto: SignupDto, authToken?: string) {
+    // Verify if the request is from an authenticated punisher
+    if (!authToken) {
+      throw new UnauthorizedException('Authentication token is required for signup');
+    }
+
+    try {
+      const decoded = this.verifyToken(authToken) as { role: string };
+      if (decoded.role !== 'punisher') {
+        throw new ForbiddenException('Only users with punisher role can create new users');
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
     const { email, password, full_name, role, mobile } = dto;
 
     if (!email || !password) {
-      throw new Error('Email and Password are required');
+      throw new UnauthorizedException('Email and Password are required');
+    }
+
+    // Validate role
+    if (role !== 'punisher' && role !== 'user') {
+      throw new UnauthorizedException('Invalid role specified');
     }
 
     const { data: signupData, error: signupError } = await supabase.auth.signUp({
@@ -21,16 +43,13 @@ export class AuthService {
       password,
     });
 
-    console.log('🟩 Supabase signupData:', signupData);
-    console.log('🟥 Supabase signupError:', signupError);
-
     if (signupError) {
-      throw new Error(`Signup failed: ${signupError.message}`);
+      throw new UnauthorizedException(`Signup failed: ${signupError.message}`);
     }
 
     const userId = signupData?.user?.id;
     if (!userId) {
-      throw new Error('User ID is missing after signup');
+      throw new UnauthorizedException('User ID is missing after signup');
     }
 
     const { data: profileData, error: insertError } = await supabase
@@ -46,76 +65,76 @@ export class AuthService {
       ])
       .select();
 
-    console.log('🟨 Inserted profileData:', profileData);
-    console.log('🟥 Insert profile error:', insertError);
-
     if (insertError) {
-      throw new Error(`Error inserting user profile: ${insertError.message}`);
+      throw new UnauthorizedException(`Error inserting user profile: ${insertError.message}`);
     }
 
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+    // Create JWT token with user data
+    const userPayload = {
+      id: userId,
       email,
-      password,
+      role,
+      full_name,
+    };
+
+    const token = jwt.sign(userPayload, this.JWT_SECRET, {
+      expiresIn: this.TOKEN_EXPIRY,
     });
 
-    if (loginError) {
-      throw new Error(`Login failed: ${loginError.message}`);
-    }
-
-    const accessToken = loginData?.session?.access_token;
-    if (!accessToken) {
-      throw new Error('Access token missing after login');
-    }
-
     return {
-      message: 'User signed up and logged in successfully.',
-      accessToken,
-      user: loginData?.user,
-      profile: profileData,
+      message: 'User created successfully',
+      accessToken: token,
+      expiresIn: this.TOKEN_EXPIRY
     };
   }
 
-  // auth.service.ts
-
-async login(loginDto: { email: string; password: string }) {
+  async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
   
     if (error) {
-      throw new Error(`Login failed: ${error.message}`);
+      throw new UnauthorizedException(`Login failed: ${error.message}`);
     }
   
-    // Fetch the user's profile data from the 'profiles' table
+    // Fetch the user's profile data
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('*')  // Select all fields from the profile table
+      .select('*')
       .eq('id', data.user.id)
       .single();
   
     if (profileError || !profileData) {
-      throw new Error(`Failed to fetch profile data: ${profileError?.message}`);
+      throw new UnauthorizedException(`Failed to fetch profile data: ${profileError?.message}`);
     }
   
-    // Create a custom JWT token with the full profile data
+    // Create JWT token with user data
     const userPayload = {
       id: data.user.id,
       email: data.user.email,
-      ...profileData, // Include the entire profile data in the payload
+      role: profileData.role,
+      full_name: profileData.fullname,
     };
   
-    const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
-      expiresIn: '1h', // Set the expiration as needed
+    const token = jwt.sign(userPayload, this.JWT_SECRET, {
+      expiresIn: this.TOKEN_EXPIRY,
     });
   
     return {
       message: 'Login successful',
       accessToken: token,
-      status: 200
+      expiresIn: this.TOKEN_EXPIRY
     };
   }
-  
-  
+
+  verifyToken(token: string) {
+    try {
+      return jwt.verify(token, this.JWT_SECRET);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
 }
