@@ -11,6 +11,7 @@ dotenv.config();
 export class AuthService {
   private readonly JWT_SECRET = process.env.JWT_SECRET!;
   private readonly TOKEN_EXPIRY = '1h';
+  public static readonly TOKEN_EXPIRY_MS = 3600000; // 1 hour in milliseconds
 
   async signup(dto: SignupDto, authToken?: string) {
     // Verify if the request is from an authenticated punisher

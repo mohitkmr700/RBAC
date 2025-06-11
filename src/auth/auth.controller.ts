@@ -32,7 +32,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
       sameSite: 'strict',
-      maxAge: 3600000, // 1 hour in milliseconds
+      maxAge: AuthService.TOKEN_EXPIRY_MS, // Use the constant from AuthService
     });
 
     // Return only the success message, without the token
