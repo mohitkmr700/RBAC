@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import * as dotenv from 'dotenv';
+import * as cookieParser from 'cookie-parser';
 
 // Load environment variables
 dotenv.config();
@@ -11,6 +12,9 @@ const env: number = parseInt(process.env.PORT || '4000', 10);
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('HTTP');
+
+  // Enable cookie parsing
+  app.use(cookieParser());
 
   // Enable CORS
   app.enableCors({

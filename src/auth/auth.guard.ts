@@ -26,20 +26,10 @@ import {
   
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const request = context.switchToHttp().getRequest();
-      const authHeader = request.headers['authorization'];
-  
-      if (!authHeader) {
-        throw new UnauthorizedException('No authorization token provided');
-      }
-  
-      if (!authHeader.startsWith('Bearer ')) {
-        throw new UnauthorizedException('Invalid token format. Use Bearer token');
-      }
-  
-      const token = authHeader.split(' ')[1];
+      const token = request.cookies['access_token'];
   
       if (!token) {
-        throw new UnauthorizedException('Token is missing');
+        throw new UnauthorizedException('No access token found in cookies');
       }
   
       try {

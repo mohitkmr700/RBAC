@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Headers, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Post, Headers, UnauthorizedException, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -20,7 +21,23 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const result = await this.authService.login(loginDto);
+    
+    // Set the access token in an HTTP-only cookie
+    response.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'strict',
+      maxAge: 3600000, // 1 hour in milliseconds
+    });
+
+    // Return only the success message, without the token
+    return {
+      message: result.message
+    };
   }
 }
