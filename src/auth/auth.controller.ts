@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Headers, UnauthorizedException, Res } from '@nestjs/common';
+import { Body, Controller, Post, Headers, UnauthorizedException, Res, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
@@ -38,6 +38,27 @@ export class AuthController {
     // Return only the success message, without the token
     return {
       message: result.message
+    };
+  }
+
+  @Post('logout')
+  async logout(@Res({ passthrough: true }) response: Response) {
+    // Check if access_token exists in cookies
+    const accessToken = response.req.cookies['access_token'];
+    
+    if (!accessToken) {
+      throw new BadRequestException('No active session found');
+    }
+
+    // Clear the access token cookie
+    response.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+
+    return {
+      message: 'Successfully logged out'
     };
   }
 }
