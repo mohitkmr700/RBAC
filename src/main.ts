@@ -15,6 +15,7 @@ async function bootstrap() {
 
   // Enable cookie parsing
   app.use(cookieParser());
+  
 
   const allowedOrigins = [
     'http://localhost:4000',
