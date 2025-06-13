@@ -15,12 +15,12 @@ async function bootstrap() {
 
   // Enable cookie parsing
   app.use(cookieParser());
-  
+
 
   const allowedOrigins = [
     'http://localhost:4000',
     'https://algoarena.co.in',
-    'https://www.algoarena.co.in/auth'
+    'https://www.algoarena.co.in/api/auth/'
   ];
   
   app.enableCors({
