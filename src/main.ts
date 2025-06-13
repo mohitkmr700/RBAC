@@ -16,24 +16,36 @@ async function bootstrap() {
   // Enable cookie parsing
   app.use(cookieParser());
 
-
   const allowedOrigins = [
     'http://localhost:4000',
+    'http://localhost:3000',
     'https://algoarena.co.in',
-    'https://www.algoarena.co.in/auth'
+    'https://www.algoarena.co.in'
   ];
   
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      // Allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin) {
+        return callback(null, true);
       }
+
+      // Check if the origin is in our allowedOrigins list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Log rejected origins for debugging
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Set-Cookie'],
+    maxAge: 3600 // 1 hour
   });
+
   // Add global logging middleware
   app.use((req, res, next) => {
     const { method, originalUrl } = req;
