@@ -34,7 +34,7 @@ jobs:
       - name: 🚀 Deploy & Restart PM2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
-            set -e
+            set -euo pipefail
 
             echo "🗃️ Backing up old deployment (if any)..."
             rm -rf /var/www/auth-service-old || true
@@ -52,13 +52,16 @@ jobs:
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             EOT
 
-                        echo "📦 Installing dependencies..."
-                        npm install --omit=dev
+            echo "✅ Node version: \$(node -v)"
+            echo "✅ NPM version: \$(npm -v)"
 
-                        echo "🔨 Building the project..."
-                        npm run build
+            echo "📦 Installing dependencies..."
+            npm install --omit=dev || { echo '❌ npm install failed'; exit 1; }
 
-                        echo "🚀 Restarting with PM2..."
-                        pm2 restart auth-service || pm2 start dist/src/main.js --name auth-service
-                        pm2 save
-                      EOF
+            echo "🔨 Building the project..."
+            npx nest build || { echo '❌ nest build failed'; exit 1; }
+
+            echo "🚀 Restarting with PM2..."
+            pm2 restart auth-service || pm2 start dist/src/main.js --name auth-service
+            pm2 save
+          EOF
