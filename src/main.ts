@@ -20,7 +20,7 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:4000',
     'https://algoarena.co.in',
-    'https://www.algoarena.co.in/api/auth/'
+    'https://www.algoarena.co.in/auth'
   ];
   
   app.enableCors({
