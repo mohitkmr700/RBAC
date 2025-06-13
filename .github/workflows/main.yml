@@ -33,7 +33,7 @@ jobs:
 
       - name: 🚀 Deploy & Restart PM2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} '
             set -euo pipefail
 
             echo "🗃️ Backing up old deployment (if any)..."
@@ -44,24 +44,20 @@ jobs:
             cd /var/www/auth-service
 
             echo "🔐 Writing environment variables..."
-            cat <<EOT > .env
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}
-            PORT=${{ secrets.PORT }}
-            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            EOT
-
-            echo "✅ Node version: \$(node -v)"
-            echo "✅ NPM version: \$(npm -v)"
+            echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+            echo "SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}" >> .env
+            echo "PORT=${{ secrets.PORT }}" >> .env
+            echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
             echo "📦 Installing dependencies..."
-            npm install --omit=dev || { echo '❌ npm install failed'; exit 1; }
+            npm install --omit=dev
 
             echo "🔨 Building the project..."
-            npx nest build || { echo '❌ nest build failed'; exit 1; }
+            npx nest build
 
             echo "🚀 Restarting with PM2..."
             pm2 restart auth-service || pm2 start dist/src/main.js --name auth-service
             pm2 save
-          EOF
+          '
+
