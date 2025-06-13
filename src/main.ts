@@ -16,13 +16,23 @@ async function bootstrap() {
   // Enable cookie parsing
   app.use(cookieParser());
 
-  // Enable CORS
+  const allowedOrigins = [
+    'http://localhost:4000',
+    'https://algoarena.co.in',
+    'https://www.algoarena.co.in/auth'
+  ];
+  
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*', // In production, set this to your frontend URL
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-
   // Add global logging middleware
   app.use((req, res, next) => {
     const { method, originalUrl } = req;
