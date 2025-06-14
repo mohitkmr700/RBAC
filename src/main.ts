@@ -20,7 +20,9 @@ async function bootstrap() {
     'http://localhost:4000',
     'http://localhost:3000',
     'https://algoarena.co.in',
-    'https://www.algoarena.co.in'
+    'https://www.algoarena.co.in',
+    'http://algoarena.co.in',
+    'http://www.algoarena.co.in'
   ];
   
   app.enableCors({
