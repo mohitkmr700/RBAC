@@ -18,7 +18,6 @@ async function bootstrap() {
 
   const allowedOrigins = [
     'http://localhost:4000',
-    'http://localhost:3000',
     'https://algoarena.co.in',
     'https://www.algoarena.co.in',
     'http://algoarena.co.in',
