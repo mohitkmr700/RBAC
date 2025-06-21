@@ -158,7 +158,7 @@ jobs:
             pm2 list
 
             echo "📋 Recent PM2 Logs:"
-            pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 || echo "No logs available yet"
+            pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 --nostream || pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 | head -20 || echo "No logs available yet"
 
             echo "🔍 Verifying application is running..."
             sleep 5
