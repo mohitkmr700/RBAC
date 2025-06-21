@@ -26,10 +26,20 @@ import {
   
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const request = context.switchToHttp().getRequest();
-      const token = request.cookies['access_token'];
+      
+      // Try to get token from different sources
+      let token = request.cookies['access_token'];
+      
+      // If no cookie token, try Authorization header (Bearer token)
+      if (!token) {
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        }
+      }
   
       if (!token) {
-        throw new UnauthorizedException('No access token found in cookies');
+        throw new UnauthorizedException('No access token found in cookies or Authorization header');
       }
   
       try {

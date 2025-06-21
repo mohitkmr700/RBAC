@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import * as dotenv from 'dotenv';
 import * as cookieParser from 'cookie-parser';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,27 @@ async function bootstrap() {
 
   // Enable cookie parsing
   app.use(cookieParser());
+
+  // Swagger documentation setup
+  const config = new DocumentBuilder()
+    .setTitle('Auth Service API')
+    .setDescription('Authentication and User Management API with Supabase integration')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth', // This name here is important for @ApiBearerAuth() decorator
+    )
+    .build();
+  
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   const allowedOrigins = [
     'http://localhost:4000',
@@ -71,6 +93,7 @@ async function bootstrap() {
 
   await app.listen(env);
   logger.log(`🚀 Application is running on: http://localhost:${env}`);
+  logger.log(`📚 Swagger documentation available at: http://localhost:${env}/api`);
   logger.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.log(`🔒 CORS enabled with allowed origins: ${allowedOrigins.join(', ')}`);
 }

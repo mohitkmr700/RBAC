@@ -7,6 +7,6 @@ import { AuthGuard } from './auth.guard'; // <--- Add this
 @Module({
   controllers: [AuthController],
   providers: [AuthService, AuthGuard], // <--- Provide the guard
-  exports: [AuthGuard], // <--- Export it if used in other modules
+  exports: [AuthService, AuthGuard], // <--- Export both service and guard
 })
 export class AuthModule {}
