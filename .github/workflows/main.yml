@@ -82,25 +82,53 @@ jobs:
             echo "✅ Dependencies installed successfully"
 
             echo "🔨 Building project..."
-            if npx --yes nest build; then
-              echo "✅ Project built successfully with 'nest build'"
-            elif npx --yes @nestjs/cli build; then
-              echo "✅ Project built successfully with '@nestjs/cli build'"
+            # Try to build with more verbose output
+            if npm run build; then
+              echo "✅ Project built successfully with 'npm run build'"
             else
-              echo "❌ Build failed with both commands"
+              echo "❌ Build failed with 'npm run build'"
+              echo "🔍 Checking if dist directory exists..."
+              ls -la dist/ || echo "dist directory does not exist"
+              echo "🔍 Checking if dist/src directory exists..."
+              ls -la dist/src/ || echo "dist/src directory does not exist"
+              exit 1
+            fi
+
+            echo "🔍 Verifying build output..."
+            if [ -f "dist/src/main.js" ]; then
+              echo "✅ Main.js file found at dist/src/main.js"
+            elif [ -f "dist/main.js" ]; then
+              echo "✅ Main.js file found at dist/main.js"
+            else
+              echo "❌ Main.js file not found in expected locations"
+              echo "🔍 Contents of dist directory:"
+              find dist/ -type f -name "*.js" | head -10
               exit 1
             fi
 
             echo "🚀 Managing PM2 process..."
+            # Stop existing process if it exists
             if pm2 list | grep -q "${{ secrets.PM2_PROCESS }}"; then
-              echo "🔄 Restarting existing PM2 process..."
-              pm2 restart ${{ secrets.PM2_PROCESS }}
-              echo "✅ PM2 process restarted"
-            else
-              echo "🆕 Starting new PM2 process..."
-              pm2 start dist/src/main.js --name ${{ secrets.PM2_PROCESS }}
-              echo "✅ New PM2 process started"
+              echo "🛑 Stopping existing PM2 process..."
+              pm2 stop ${{ secrets.PM2_PROCESS }} || true
+              pm2 delete ${{ secrets.PM2_PROCESS }} || true
+              echo "✅ Existing PM2 process stopped and deleted"
             fi
+
+            # Determine the correct path for main.js
+            MAIN_JS_PATH=""
+            if [ -f "dist/src/main.js" ]; then
+              MAIN_JS_PATH="dist/src/main.js"
+            elif [ -f "dist/main.js" ]; then
+              MAIN_JS_PATH="dist/main.js"
+            else
+              echo "❌ Could not find main.js file"
+              exit 1
+            fi
+
+            echo "🆕 Starting new PM2 process with: $MAIN_JS_PATH"
+            pm2 start $MAIN_JS_PATH --name ${{ secrets.PM2_PROCESS }}
+            echo "✅ New PM2 process started"
             
             pm2 save
             echo "✅ PM2 configuration saved"
