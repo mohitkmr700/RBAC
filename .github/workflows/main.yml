@@ -31,21 +31,31 @@ jobs:
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
 
-            echo "🔁 Swapping deployments..."
-            rm -rf ${{ secrets.DEPLOY_PATH }}-old || true
-            mv ${{ secrets.DEPLOY_PATH }} ${{ secrets.DEPLOY_PATH }}-old || true
-            mv ${{ secrets.DEPLOY_PATH }}-temp ${{ secrets.DEPLOY_PATH }}
+            echo "🔁 Managing old deployment backup..."
+            # Remove old backup if it exists
+            if [ -d "${{ secrets.DEPLOY_PATH }}-old" ]; then
+              echo "🗑️ Removing old backup..."
+              rm -rf "${{ secrets.DEPLOY_PATH }}-old"
+            fi
 
-            cd ${{ secrets.DEPLOY_PATH }}
+            # Backup current deployment if it exists
+            if [ -d "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "💾 Backing up current deployment..."
+              mv "${{ secrets.DEPLOY_PATH }}" "${{ secrets.DEPLOY_PATH }}-old"
+            fi
 
-            echo "📝 Writing .env file..."
-            cat > .env << 'EOT'
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}
-            PORT=${{ secrets.PORT }}
-            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            EOT
+            # Move temp to main deployment
+            echo "🔄 Activating new deployment..."
+            mv "${{ secrets.DEPLOY_PATH }}-temp" "${{ secrets.DEPLOY_PATH }}"
+
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "📝 Creating .env file..."
+            echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+            echo "SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}" >> .env
+            echo "PORT=${{ secrets.PORT }}" >> .env
+            echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
             echo "📦 Installing dependencies..."
             npm install --omit=dev
@@ -54,9 +64,11 @@ jobs:
             npx --yes nest build || npx --yes @nestjs/cli build
 
             echo "🚀 Restarting PM2..."
-            pm2 restart ${{ secrets.PM2_PROCESS }} || pm2 start dist/main.js --name ${{ secrets.PM2_PROCESS }}
+            pm2 restart ${{ secrets.PM2_PROCESS }} || pm2 start dist/src/main.js --name ${{ secrets.PM2_PROCESS }}
             pm2 save
 
             echo "📋 PM2 Logs:"
             pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 || echo "No logs yet"
+
+            echo "✅ Deployment completed successfully!"
           EOF
