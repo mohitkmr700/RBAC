@@ -16,18 +16,23 @@ jobs:
 
       - name: 🔐 Setup SSH Key
         run: |
+          echo "🔑 Setting up SSH key for deployment..."
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          echo "✅ SSH key setup completed"
 
       - name: 📦 Rsync project to EC2
         run: |
+          echo "📤 Starting file transfer to EC2..."
           rsync -avz --delete --exclude=node_modules --exclude='.git' ./ \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.DEPLOY_PATH }}-temp/
+          echo "✅ File transfer completed successfully"
 
       - name: 🚀 Deploy and Restart Auth Service
         run: |
+          echo "🚀 Starting deployment process..."
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
 
@@ -36,39 +41,78 @@ jobs:
             if [ -d "${{ secrets.DEPLOY_PATH }}-old" ]; then
               echo "🗑️ Removing old backup..."
               rm -rf "${{ secrets.DEPLOY_PATH }}-old"
+              echo "✅ Old backup removed"
+            else
+              echo "ℹ️ No old backup found"
             fi
 
             # Backup current deployment if it exists
             if [ -d "${{ secrets.DEPLOY_PATH }}" ]; then
               echo "💾 Backing up current deployment..."
               mv "${{ secrets.DEPLOY_PATH }}" "${{ secrets.DEPLOY_PATH }}-old"
+              echo "✅ Current deployment backed up"
+            else
+              echo "ℹ️ No current deployment to backup"
             fi
 
             # Move temp to main deployment
             echo "🔄 Activating new deployment..."
             mv "${{ secrets.DEPLOY_PATH }}-temp" "${{ secrets.DEPLOY_PATH }}"
+            echo "✅ New deployment activated"
 
             cd "${{ secrets.DEPLOY_PATH }}"
+            echo "📁 Changed to deployment directory: $(pwd)"
 
-            echo "📝 Creating .env file..."
+            echo "📝 Creating .env file with environment variables..."
             echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
             echo "SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}" >> .env
             echo "PORT=${{ secrets.PORT }}" >> .env
             echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}" >> .env
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "✅ .env file created with environment variables"
+            echo "📋 .env file contents (without sensitive data):"
+            echo "SUPABASE_URL=[REDACTED]"
+            echo "SUPABASE_SERVICE_SECRET_ROLE_KEY=[REDACTED]"
+            echo "PORT=${{ secrets.PORT }}"
+            echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}"
+            echo "JWT_SECRET=[REDACTED]"
 
             echo "📦 Installing dependencies..."
             npm install --omit=dev
+            echo "✅ Dependencies installed successfully"
 
             echo "🔨 Building project..."
-            npx --yes nest build || npx --yes @nestjs/cli build
+            if npx --yes nest build; then
+              echo "✅ Project built successfully with 'nest build'"
+            elif npx --yes @nestjs/cli build; then
+              echo "✅ Project built successfully with '@nestjs/cli build'"
+            else
+              echo "❌ Build failed with both commands"
+              exit 1
+            fi
 
-            echo "🚀 Restarting PM2..."
-            pm2 restart ${{ secrets.PM2_PROCESS }} || pm2 start dist/src/main.js --name ${{ secrets.PM2_PROCESS }}
+            echo "🚀 Managing PM2 process..."
+            if pm2 list | grep -q "${{ secrets.PM2_PROCESS }}"; then
+              echo "🔄 Restarting existing PM2 process..."
+              pm2 restart ${{ secrets.PM2_PROCESS }}
+              echo "✅ PM2 process restarted"
+            else
+              echo "🆕 Starting new PM2 process..."
+              pm2 start dist/src/main.js --name ${{ secrets.PM2_PROCESS }}
+              echo "✅ New PM2 process started"
+            fi
+            
             pm2 save
+            echo "✅ PM2 configuration saved"
 
-            echo "📋 PM2 Logs:"
-            pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 || echo "No logs yet"
+            echo "📋 PM2 Status:"
+            pm2 list
+
+            echo "📋 Recent PM2 Logs:"
+            pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 || echo "No logs available yet"
 
             echo "✅ Deployment completed successfully!"
+            echo "🎉 Auth Service is now running on the server"
           EOF
+          
+          echo "🎯 Deployment workflow completed successfully!"
