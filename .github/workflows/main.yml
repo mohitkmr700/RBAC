@@ -33,7 +33,7 @@ jobs:
       - name: 🚀 Deploy and Restart Auth Service
         run: |
           echo "🚀 Starting deployment process..."
-          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          timeout 600 ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
 
             echo "🔁 Managing old deployment backup..."
@@ -81,24 +81,45 @@ jobs:
             npm install --omit=dev
             echo "✅ Dependencies installed successfully"
 
+            echo "📦 Installing dev dependencies for build..."
+            npm install --include=dev
+            echo "✅ Dev dependencies installed for build"
+
             echo "🔨 Building project..."
             # Try to build with more verbose output
             if npm run build; then
               echo "✅ Project built successfully with 'npm run build'"
+            elif npx nest build; then
+              echo "✅ Project built successfully with 'npx nest build'"
+            elif npx @nestjs/cli build; then
+              echo "✅ Project built successfully with 'npx @nestjs/cli build'"
+            elif npm run build:tsc; then
+              echo "✅ Project built successfully with 'npm run build:tsc'"
+            elif npx tsc; then
+              echo "✅ Project built successfully with 'npx tsc' (TypeScript compiler)"
             else
-              echo "❌ Build failed with 'npm run build'"
+              echo "❌ Build failed with all methods"
+              echo "🔍 Checking available commands..."
+              which nest || echo "nest command not found"
+              which npx || echo "npx command not found"
               echo "🔍 Checking if dist directory exists..."
               ls -la dist/ || echo "dist directory does not exist"
               echo "🔍 Checking if dist/src directory exists..."
               ls -la dist/src/ || echo "dist/src directory does not exist"
+              echo "🔍 Checking package.json scripts..."
+              cat package.json | grep -A 10 '"scripts"'
               exit 1
             fi
 
+            echo "🧹 Cleaning up dev dependencies..."
+            npm install --omit=dev
+            echo "✅ Dev dependencies removed"
+
             echo "🔍 Verifying build output..."
-            if [ -f "dist/src/main.js" ]; then
-              echo "✅ Main.js file found at dist/src/main.js"
-            elif [ -f "dist/main.js" ]; then
+            if [ -f "dist/main.js" ]; then
               echo "✅ Main.js file found at dist/main.js"
+            elif [ -f "dist/src/main.js" ]; then
+              echo "✅ Main.js file found at dist/src/main.js"
             else
               echo "❌ Main.js file not found in expected locations"
               echo "🔍 Contents of dist directory:"
@@ -117,10 +138,10 @@ jobs:
 
             # Determine the correct path for main.js
             MAIN_JS_PATH=""
-            if [ -f "dist/src/main.js" ]; then
-              MAIN_JS_PATH="dist/src/main.js"
-            elif [ -f "dist/main.js" ]; then
+            if [ -f "dist/main.js" ]; then
               MAIN_JS_PATH="dist/main.js"
+            elif [ -f "dist/src/main.js" ]; then
+              MAIN_JS_PATH="dist/src/main.js"
             else
               echo "❌ Could not find main.js file"
               exit 1
@@ -138,6 +159,14 @@ jobs:
 
             echo "📋 Recent PM2 Logs:"
             pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 || echo "No logs available yet"
+
+            echo "🔍 Verifying application is running..."
+            sleep 5
+            if curl -f http://localhost:${{ secrets.PORT }}/health > /dev/null 2>&1; then
+              echo "✅ Application is responding on health endpoint"
+            else
+              echo "⚠️ Health check failed, but continuing..."
+            fi
 
             echo "✅ Deployment completed successfully!"
             echo "🎉 Auth Service is now running on the server"
