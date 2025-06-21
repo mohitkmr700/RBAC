@@ -1,4 +1,4 @@
-name: 🚀 Deploy to Server (Auth Service)
+name: 🚀 Deploy to EC2 (Auth Service)
 
 on:
   push:
@@ -12,52 +12,51 @@ jobs:
 
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: 🔐 Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-
-      - name: 🧹 Prepare target directory
+      - name: 🔐 Setup SSH Key
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            mkdir -p /var/www/auth-service-temp
-            rm -rf /var/www/auth-service-temp/*
-          EOF
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 📦 Upload project to server
+      - name: 📦 Rsync project to EC2
         run: |
           rsync -avz --delete --exclude=node_modules --exclude='.git' ./ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/var/www/auth-service-temp/
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.DEPLOY_PATH }}-temp/
 
-      - name: 🚀 Deploy & Restart PM2
+      - name: 🚀 Deploy and Restart Auth Service
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} '
-            set -euo pipefail
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
 
-            echo "🗃️ Backing up old deployment (if any)..."
-            rm -rf /var/www/auth-service-old || true
-            mv /var/www/auth-service /var/www/auth-service-old || true
-            mv /var/www/auth-service-temp /var/www/auth-service
+            echo "🔁 Swapping deployments..."
+            rm -rf ${{ secrets.DEPLOY_PATH }}-old || true
+            mv ${{ secrets.DEPLOY_PATH }} ${{ secrets.DEPLOY_PATH }}-old || true
+            mv ${{ secrets.DEPLOY_PATH }}-temp ${{ secrets.DEPLOY_PATH }}
 
-            cd /var/www/auth-service
+            cd ${{ secrets.DEPLOY_PATH }}
 
-            echo "🔐 Writing environment variables..."
-            echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
-            echo "SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}" >> .env
-            echo "PORT=${{ secrets.PORT }}" >> .env
-            echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}" >> .env
-            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "📝 Writing .env file..."
+            cat > .env << 'EOT'
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_SERVICE_SECRET_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_SECRET_ROLE_KEY }}
+            PORT=${{ secrets.PORT }}
+            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            EOT
 
             echo "📦 Installing dependencies..."
             npm install --omit=dev
 
-            echo "🔨 Building the project..."
-            npx nest build
+            echo "🔨 Building project..."
+            npx --yes nest build || npx --yes @nestjs/cli build
 
-            echo "🚀 Restarting with PM2..."
-            pm2 restart auth-service || pm2 start dist/src/main.js --name auth-service
+            echo "🚀 Restarting PM2..."
+            pm2 restart ${{ secrets.PM2_PROCESS }} || pm2 start dist/main.js --name ${{ secrets.PM2_PROCESS }}
             pm2 save
-          '
 
+            echo "📋 PM2 Logs:"
+            pm2 logs ${{ secrets.PM2_PROCESS }} --lines 20 || echo "No logs yet"
+          EOF
