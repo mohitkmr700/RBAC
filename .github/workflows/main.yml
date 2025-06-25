@@ -69,6 +69,12 @@ jobs:
             echo "PORT=${{ secrets.PORT }}" >> .env
             echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}" >> .env
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "POCKETBASE_URL=${{ secrets.POCKETBASE_URL }}" >> .env
+            echo "POCKETBASE_ADMIN_EMAIL=${{ secrets.POCKETBASE_ADMIN_EMAIL }}" >> .env
+            echo "POCKETBASE_ADMIN_PASSWORD=${{ secrets.POCKETBASE_ADMIN_PASSWORD }}" >> .env
+            echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
+            echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
             echo "✅ .env file created with environment variables"
             echo "📋 .env file contents (without sensitive data):"
             echo "SUPABASE_URL=[REDACTED]"
@@ -76,6 +82,12 @@ jobs:
             echo "PORT=${{ secrets.PORT }}"
             echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}"
             echo "JWT_SECRET=[REDACTED]"
+            echo "POCKETBASE_URL=[REDACTED]"
+            echo "POCKETBASE_ADMIN_EMAIL=[REDACTED]"
+            echo "POCKETBASE_ADMIN_PASSWORD=[REDACTED]"
+            echo "REDIS_HOST=[REDACTED]"
+            echo "REDIS_PASSWORD=[REDACTED]"
+            echo "REDIS_PORT=[REDACTED]"
 
             echo "📦 Installing dependencies..."
             npm install --omit=dev

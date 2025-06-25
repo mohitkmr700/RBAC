@@ -38,12 +38,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const allowedOrigins = [
-    'http://localhost:4000',
-    'http://localhost:3000',
-    'https://algoarena.co.in',
-    'https://www.algoarena.co.in'
-  ];
+  const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [];
   
   app.enableCors({
     origin: (origin, callback) => {
