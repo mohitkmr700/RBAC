@@ -1,14 +1,20 @@
 import { Body, Controller, Post, Headers, UnauthorizedException, Res, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 
+@ApiTags('Authentication')
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
+  @ApiOperation({ summary: 'User signup', description: 'Create a new user account (requires punisher role)' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
   async signup(
     @Body() dto: SignupDto,
     @Headers('authorization') authHeader?: string
@@ -21,6 +27,9 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiOperation({ summary: 'User login', description: 'Authenticate user and return JWT token with profile data' })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid credentials' })
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response
@@ -35,13 +44,16 @@ export class AuthController {
       maxAge: AuthService.TOKEN_EXPIRY_MS, // Use the constant from AuthService
     });
 
-    // Return only the success message, without the token
+    // Return only the success message, profile picture is included in the token
     return {
       message: result.message
     };
   }
 
   @Post('logout')
+  @ApiOperation({ summary: 'User logout', description: 'Logout user and clear session' })
+  @ApiResponse({ status: 200, description: 'Successfully logged out' })
+  @ApiResponse({ status: 400, description: 'Bad request - No active session' })
   async logout(@Res({ passthrough: true }) response: Response) {
     // Check if access_token exists in cookies
     const accessToken = response.req.cookies['access_token'];

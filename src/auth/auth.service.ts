@@ -76,6 +76,7 @@ export class AuthService {
       email,
       role,
       full_name,
+      profile_picture: null,
     };
 
     const token = jwt.sign(userPayload, this.JWT_SECRET, {
@@ -112,12 +113,13 @@ export class AuthService {
       throw new UnauthorizedException(`Failed to fetch profile data: ${profileError?.message}`);
     }
   
-    // Create JWT token with user data
+    // Create JWT token with user data including profile picture
     const userPayload = {
       id: data.user.id,
       email: data.user.email,
       role: profileData.role,
       full_name: profileData.fullname,
+      profile_picture: profileData.avatar_url || null,
     };
   
     const token = jwt.sign(userPayload, this.JWT_SECRET, {

@@ -15,6 +15,7 @@ import {
     email: string;
     role: string;
     full_name: string;
+    profile_picture: string | null;
   }
   
   @Injectable()

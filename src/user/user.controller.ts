@@ -11,6 +11,7 @@ interface UserPayload {
   email: string;
   role: string;
   full_name: string;
+  profile_picture: string | null;
 }
 
 @ApiTags('User Profiles')
