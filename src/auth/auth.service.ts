@@ -57,23 +57,8 @@ export class AuthService {
       throw new UnauthorizedException(`Error inserting user profile: ${insertError.message}`);
     }
 
-    // Create JWT token with user data
-    const userPayload = {
-      id: userId,
-      email,
-      role,
-      full_name,
-      profile_picture: null,
-    };
-
-    const token = jwt.sign(userPayload, this.JWT_SECRET, {
-      expiresIn: this.TOKEN_EXPIRY,
-    });
-
     return {
-      message: 'User created successfully',
-      accessToken: token,
-      expiresIn: this.TOKEN_EXPIRY
+      message: 'User created successfully'
     };
   }
 
