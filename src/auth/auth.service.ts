@@ -13,20 +13,7 @@ export class AuthService {
   private readonly TOKEN_EXPIRY = '1h';
   public static readonly TOKEN_EXPIRY_MS = 3600000; // 1 hour in milliseconds
 
-  async signup(dto: SignupDto, authToken?: string) {
-    // Verify if the request is from an authenticated punisher
-    if (!authToken) {
-      throw new UnauthorizedException('Authentication token is required for signup');
-    }
-
-    try {
-      const decoded = this.verifyToken(authToken) as { role: string };
-      if (decoded.role !== 'punisher') {
-        throw new ForbiddenException('Only users with punisher role can create new users');
-      }
-    } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+  async signup(dto: SignupDto) {
 
     const { email, password, full_name, role, mobile } = dto;
 

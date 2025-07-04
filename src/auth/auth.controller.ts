@@ -1,9 +1,11 @@
-import { Body, Controller, Post, Headers, UnauthorizedException, Res, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Post, Headers, UnauthorizedException, Res, BadRequestException, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { AuthGuard } from './auth.guard';
+import { Roles } from './auth.decorator';
 
 @ApiTags('Authentication')
 @Controller()
@@ -11,19 +13,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
+  @UseGuards(AuthGuard)
+  @Roles('punisher')
   @ApiOperation({ summary: 'User signup', description: 'Create a new user account (requires punisher role)' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
-  async signup(
-    @Body() dto: SignupDto,
-    @Headers('authorization') authHeader?: string
-  ) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Authentication token is required');
-    }
-    const token = authHeader.split(' ')[1];
-    return this.authService.signup(dto, token);
+  async signup(@Body() dto: SignupDto) {
+    return this.authService.signup(dto);
   }
 
   @Post('login')
