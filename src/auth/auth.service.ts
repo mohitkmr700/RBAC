@@ -21,9 +21,9 @@ export class AuthService {
       throw new UnauthorizedException('Email and Password are required');
     }
 
-    // Validate role
-    if (role !== 'punisher' && role !== 'user') {
-      throw new UnauthorizedException('Invalid role specified');
+    // Validate role - allow punisher, user, and customer roles
+    if (role !== 'punisher' && role !== 'user' && role !== 'customer') {
+      throw new UnauthorizedException(`Invalid role specified: "${role}". Allowed roles are: punisher, user, customer. Please check for typos.`);
     }
 
     const { data: signupData, error: signupError } = await supabase.auth.signUp({

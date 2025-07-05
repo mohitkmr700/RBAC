@@ -15,7 +15,7 @@ export class AuthController {
   @Post('signup')
   @UseGuards(AuthGuard)
   @Roles('punisher')
-  @ApiOperation({ summary: 'User signup', description: 'Create a new user account (requires punisher role)' })
+  @ApiOperation({ summary: 'User signup', description: 'Create a new user account (requires punisher role). Punisher users can create users with any role: punisher, user, or customer.' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
