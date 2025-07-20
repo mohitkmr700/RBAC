@@ -373,11 +373,10 @@ export class ExpenseService {
       const monthDate = new Date(dto.month + '-01');
       const formattedMonth = monthDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
-      // First, deactivate any existing active plans for this month
+      // First, deactivate ALL existing active plans across ALL months
       await supabase
         .from('expense_plans')
         .update({ is_active: false })
-        .eq('month', formattedMonth)
         .eq('is_active', true);
 
       // Create the new plan
@@ -656,6 +655,39 @@ export class ExpenseService {
     } catch (error) {
       throw new HttpException(
         `Failed to update expense plan: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async updatePlanActiveStatus(planId: string, isActive: boolean) {
+    try {
+      // If setting to active, first deactivate ALL other plans across ALL months
+      if (isActive) {
+        // Deactivate all other plans (regardless of month)
+        await supabase
+          .from('expense_plans')
+          .update({ is_active: false })
+          .neq('id', planId);
+      }
+
+      // Update the target plan
+      const { data, error } = await supabase
+        .from('expense_plans')
+        .update({ is_active: isActive })
+        .eq('id', planId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to update plan active status: ${error.message}`,
         HttpStatus.BAD_REQUEST,
       );
     }

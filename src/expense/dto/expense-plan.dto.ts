@@ -52,4 +52,9 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+export class UpdatePlanActiveStatusDto {
+  @IsBoolean()
+  is_active: boolean;
 } 

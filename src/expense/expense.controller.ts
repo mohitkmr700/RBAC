@@ -20,6 +20,7 @@ import {
   CreatePlanDto,
   SyncPlanDto,
   UpdatePlanDto,
+  UpdatePlanActiveStatusDto,
 } from './dto';
 
 @Controller('expense')
@@ -121,6 +122,14 @@ export class ExpenseController {
     @Body() dto: UpdatePlanDto,
   ) {
     return this.expenseService.updateExpensePlan(id, dto);
+  }
+
+  @Patch('plan/:id/is_active')
+  async updatePlanActiveStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdatePlanActiveStatusDto,
+  ) {
+    return this.expenseService.updatePlanActiveStatus(id, dto.is_active);
   }
 
   @Get('plan/:id/variance-history')
