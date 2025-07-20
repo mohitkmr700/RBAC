@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpStatus,
 } from '@nestjs/common';
@@ -90,6 +91,23 @@ export class ExpenseController {
   @Get('plan/:month')
   async getActivePlan(@Param('month') month: string) {
     return this.expenseService.getActivePlan(month);
+  }
+
+  @Get('plans')
+  async getAllPlans(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('month') month?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    const options = {
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      month,
+      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+    };
+
+    return this.expenseService.getAllPlans(options);
   }
 
   @Post('plan/sync')

@@ -472,6 +472,61 @@ export class ExpenseService {
     }
   }
 
+  async getAllPlans(options?: { 
+    limit?: number; 
+    offset?: number; 
+    month?: string;
+    isActive?: boolean;
+  }) {
+    try {
+      let query = supabase
+        .from('expense_plans')
+        .select(`
+          *,
+          planned_expense_items (
+            id,
+            category,
+            planned_amount
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (options?.month) {
+        const monthDate = new Date(options.month + '-01');
+        const formattedMonth = monthDate.toISOString().split('T')[0];
+        query = query.eq('month', formattedMonth);
+      }
+
+      if (options?.isActive !== undefined) {
+        query = query.eq('is_active', options.isActive);
+      }
+
+      // Apply pagination
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, (options.offset + (options.limit || 10)) - 1);
+      }
+
+      const { data: plans, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: plans || [],
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get all plans: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   async syncPlanVariance(dto: SyncPlanDto) {
     try {
       // Convert month string (YYYY-MM) to proper date format for database
