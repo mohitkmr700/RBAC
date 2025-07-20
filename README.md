@@ -29,6 +29,7 @@ A NestJS-based authentication service with Supabase integration, featuring user 
 - 👥 User management and profile handling
 - 🛡️ Role-based access control (punisher, user roles)
 - 📋 Permission management system
+- 💰 Expense tracking and budget planning
 - 🏥 Health check endpoints
 - 📚 Swagger API documentation
 - 🔒 Secure cookie-based and bearer token authentication
@@ -120,6 +121,22 @@ Access the Swagger UI at: `http://localhost:3301/api`
 | `/permissions` | GET | Get all permissions | ✅ | punisher only |
 | `/permissions` | POST | Create new permission | ✅ | punisher only |
 
+### Expense Management Endpoints
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/expense/credit` | GET | Get all credit cards | ✅ |
+| `/expense/credit` | POST | Create new credit card | ✅ |
+| `/expense/credit/:id` | PATCH | Update credit card | ✅ |
+| `/expense/monthly-expenses` | POST | Add monthly expense | ✅ |
+| `/expense/misc-expenses` | POST | Add misc expense | ✅ |
+| `/expense/expenses/:month` | GET | Get monthly breakdown | ✅ |
+| `/expense/summary/:month` | GET | Get monthly summary | ✅ |
+| `/expense/summary/:month` | POST | Generate monthly summary | ✅ |
+| `/expense/plan` | POST | Create expense plan | ✅ |
+| `/expense/plan/:month` | GET | Get active plan | ✅ |
+| `/expense/plan/sync` | POST | Sync plan variance | ✅ |
+
 ### Health Check
 
 | Endpoint | Method | Description |
@@ -175,6 +192,35 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
      "http://localhost:3301/user/profiles/search?q=john"
 ```
 
+### Expense Management Examples
+
+#### Get Monthly Summary
+```bash
+curl -X GET "http://localhost:3301/expense/summary/2024-01" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Create Monthly Expense Plan
+```bash
+curl -X POST "http://localhost:3301/expense/plan" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "month": "2024-01",
+    "plan_name": "January 2024 Budget",
+    "items": [
+      {"category": "Rent", "planned_amount": 1200},
+      {"category": "Groceries", "planned_amount": 500}
+    ]
+  }'
+```
+
+#### Get Credit Cards
+```bash
+curl -X GET "http://localhost:3301/expense/credit" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
 ## Database Schema
 
 ### Profiles Table (Supabase)
@@ -187,6 +233,76 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 | role | text | User role ('punisher' or 'user') |
 | phone | text | User's phone number (optional) |
 | email | varchar | User's email address |
+
+### Expense Tables (Supabase)
+
+#### fixed_expenses
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| category | text | Expense category |
+| amount | decimal | Fixed amount |
+| is_credit_card | boolean | Credit card expense flag |
+| notes | text | Additional notes |
+
+#### monthly_expenses
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| month | date | Month (YYYY-MM-DD format) |
+| fixed_expense_id | uuid | Foreign key to fixed_expenses |
+| actual_paid | decimal | Actual amount paid |
+| remarks | text | Payment remarks |
+
+#### misc_expenses
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| month | date | Month (YYYY-MM-DD format) |
+| category | text | Expense category |
+| amount | decimal | Amount spent |
+| description | text | Expense description |
+
+#### credit_cards
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| card_name | text | Credit card name |
+| total_limit | decimal | Total credit limit |
+| total_due | decimal | Current amount due |
+| min_due | decimal | Minimum payment due |
+| last_updated | timestamp | Last update timestamp |
+
+#### monthly_summary
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| month | date | Month (YYYY-MM-DD format) |
+| salary_inhand | decimal | Monthly salary |
+| total_fixed_paid | decimal | Total fixed expenses paid |
+| total_misc | decimal | Total misc expenses |
+| total_credit_paid | decimal | Total credit card payments |
+| savings | decimal | Calculated savings |
+| notes | text | Summary notes |
+
+#### expense_plans
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| month | date | Month (YYYY-MM-DD format) |
+| plan_name | text | Plan name |
+| version | text | Plan version |
+| is_active | boolean | Active plan flag |
+| created_at | timestamp | Creation timestamp |
+| notes | text | Plan notes |
+
+#### planned_expense_items
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| plan_id | uuid | Foreign key to expense_plans |
+| category | text | Expense category |
+| planned_amount | decimal | Planned amount |
 
 ## Project Structure
 
@@ -211,6 +327,17 @@ src/
 │   ├── pocketbase.client.ts
 │   └── dto/
 │       └── permission.dto.ts
+├── expense/              # Expense management module
+│   ├── expense.controller.ts
+│   ├── expense.service.ts
+│   ├── expense.module.ts
+│   └── dto/
+│       ├── monthly-expense.dto.ts
+│       ├── misc-expense.dto.ts
+│       ├── credit-card.dto.ts
+│       ├── monthly-summary.dto.ts
+│       ├── expense-plan.dto.ts
+│       └── index.ts
 ├── health/              # Health check module
 │   ├── health.controller.ts
 │   └── health.module.ts
@@ -258,7 +385,8 @@ The project uses:
 2. **JWT Tokens**: Tokens are signed with a secure secret and have appropriate expiration
 3. **Role-based Access**: Endpoints are protected with role-based guards
 4. **Input Validation**: All inputs are validated using class-validator decorators
-5. **HTTPS**: Use HTTPS in production environments
+5. **Data Masking**: All examples use masked UUIDs and placeholder tokens for security
+6. **HTTPS**: Use HTTPS in production environments
 
 ## Deployment
 
