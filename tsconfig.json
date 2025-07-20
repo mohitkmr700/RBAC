@@ -8,7 +8,7 @@
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
     "sourceMap": true,
-    "outDir": "./dist",  // Back to dist to avoid nested src structure
+    "outDir": "./dist/src",  // Output to dist/src to match deployment expectations
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,

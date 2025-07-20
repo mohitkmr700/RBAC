@@ -404,7 +404,7 @@ COPY dist ./dist
 
 EXPOSE 3301
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
 ```
 
 ### Environment Setup
