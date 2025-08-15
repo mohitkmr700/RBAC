@@ -5,13 +5,19 @@ import {
   UpdateMonthlyExpenseDto,
   CreateMiscExpenseDto,
   UpdateMiscExpenseDto,
-  CreateCreditCardDto,
-  UpdateCreditCardDto,
+  CreateDebtDto,
+  UpdateDebtDto,
   CreateMonthlySummaryDto,
   UpdateMonthlySummaryDto,
   CreatePlanDto,
   SyncPlanDto,
   UpdatePlanDto,
+  CreateFixedExpenseDto,
+  UpdateFixedExpenseDto,
+  CreateDebtPaymentDto,
+  UpdateDebtPaymentDto,
+  CreatePlanItemDto,
+  UpdatePlanItemDto,
 } from './dto';
 
 @Injectable()
@@ -126,6 +132,15 @@ export class ExpenseService {
             amount,
             is_credit_card,
             notes
+          ),
+          debt (
+            id,
+            name,
+            debt_type
+          ),
+          expense_plans (
+            id,
+            plan_name
           )
         `)
         .eq('month', formattedMonth);
@@ -155,13 +170,13 @@ export class ExpenseService {
     }
   }
 
-  // Credit Cards
-  async getAllCreditCards() {
+  // Debt Management
+  async getAllDebts() {
     try {
       const { data, error } = await supabase
-        .from('credit_cards')
+        .from('debt')
         .select('*')
-        .order('card_name');
+        .order('name');
 
       if (error) throw error;
 
@@ -171,16 +186,16 @@ export class ExpenseService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to get credit cards: ${error.message}`,
+        `Failed to get debts: ${error.message}`,
         HttpStatus.BAD_REQUEST,
       );
     }
   }
 
-  async createCreditCard(dto: CreateCreditCardDto) {
+  async createDebt(dto: CreateDebtDto) {
     try {
       const { data, error } = await supabase
-        .from('credit_cards')
+        .from('debt')
         .insert([{ ...dto, last_updated: new Date().toISOString() }])
         .select()
         .single();
@@ -193,16 +208,16 @@ export class ExpenseService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to create credit card: ${error.message}`,
+        `Failed to create debt: ${error.message}`,
         HttpStatus.BAD_REQUEST,
       );
     }
   }
 
-  async updateCreditCard(id: string, dto: UpdateCreditCardDto) {
+  async updateDebt(id: string, dto: UpdateDebtDto) {
     try {
       const { data, error } = await supabase
-        .from('credit_cards')
+        .from('debt')
         .update({ ...dto, last_updated: new Date().toISOString() })
         .eq('id', id)
         .select()
@@ -216,7 +231,7 @@ export class ExpenseService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to update credit card: ${error.message}`,
+        `Failed to update debt: ${error.message}`,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -279,7 +294,7 @@ export class ExpenseService {
       // Calculate totals
       const totalFixedPaid = (monthlyExpenses || []).reduce((sum, exp) => sum + exp.actual_paid, 0);
       const totalMisc = (miscExpenses || []).reduce((sum, exp) => sum + exp.amount, 0);
-      const totalCreditPaid = (monthlyExpenses || [])
+      const totalDebtPaid = (monthlyExpenses || [])
         .filter(exp => exp.fixed_expenses && (exp.fixed_expenses as any).is_credit_card)
         .reduce((sum, exp) => sum + exp.actual_paid, 0);
 
@@ -298,7 +313,7 @@ export class ExpenseService {
         salary_inhand: salaryInHand,
         total_fixed_paid: totalFixedPaid,
         total_misc: totalMisc,
-        total_credit_paid: totalCreditPaid,
+        total_credit_paid: totalDebtPaid,
         savings,
         notes: notes || '',
       };
@@ -710,6 +725,613 @@ export class ExpenseService {
     } catch (error) {
       throw new HttpException(
         `Failed to get plan variance history: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Fixed Expenses
+  async createFixedExpense(dto: CreateFixedExpenseDto) {
+    try {
+      const { data, error } = await supabase
+        .from('fixed_expenses')
+        .insert([dto])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to create fixed expense: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async updateFixedExpense(id: string, dto: UpdateFixedExpenseDto) {
+    try {
+      const { data, error } = await supabase
+        .from('fixed_expenses')
+        .update(dto)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to update fixed expense: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async deleteFixedExpense(id: string) {
+    try {
+      const { error } = await supabase
+        .from('fixed_expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        message: 'Fixed expense deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete fixed expense: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async getFixedExpenses(options?: { 
+    profileId?: string; 
+    limit?: number; 
+    offset?: number; 
+  }) {
+    try {
+      let query = supabase
+        .from('fixed_expenses')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (options?.profileId) {
+        query = query.eq('profile_id', options.profileId);
+      }
+
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, (options.offset + (options.limit || 10)) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data || [],
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get fixed expenses: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Debt Payments
+  async createDebtPayment(dto: CreateDebtPaymentDto) {
+    try {
+      const { data, error } = await supabase
+        .from('debt_payments')
+        .insert([dto])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to create debt payment: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async updateDebtPayment(id: string, dto: UpdateDebtPaymentDto) {
+    try {
+      const { data, error } = await supabase
+        .from('debt_payments')
+        .update(dto)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to update debt payment: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async deleteDebtPayment(id: string) {
+    try {
+      const { error } = await supabase
+        .from('debt_payments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        message: 'Debt payment deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete debt payment: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async getDebtPayments(options?: { 
+    debtId?: number; 
+    profileId?: string; 
+    month?: string; 
+    limit?: number; 
+    offset?: number; 
+  }) {
+    try {
+      let query = supabase
+        .from('debt_payments')
+        .select(`
+          *,
+          debt (
+            id,
+            name,
+            debt_type
+          )
+        `)
+        .order('payment_date', { ascending: false });
+
+      if (options?.debtId) {
+        query = query.eq('debt_id', options.debtId);
+      }
+
+      if (options?.profileId) {
+        query = query.eq('profile_id', options.profileId);
+      }
+
+      if (options?.month) {
+        const monthDate = new Date(options.month + '-01');
+        const formattedMonth = monthDate.toISOString().split('T')[0];
+        query = query.eq('payment_date', formattedMonth);
+      }
+
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, (options.offset + (options.limit || 10)) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data || [],
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get debt payments: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Plan Items Management
+  async createPlanItem(expensePlanId: string, dto: CreatePlanItemDto) {
+    try {
+      const { data, error } = await supabase
+        .from('planned_expense_items')
+        .insert([{ ...dto, expense_plan_id: parseInt(expensePlanId) }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to create plan item: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async updatePlanItem(id: string, dto: UpdatePlanItemDto) {
+    try {
+      const { data, error } = await supabase
+        .from('planned_expense_items')
+        .update(dto)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to update plan item: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async deletePlanItem(id: string) {
+    try {
+      const { error } = await supabase
+        .from('planned_expense_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        message: 'Plan item deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete plan item: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Enhanced Monthly Expenses with new schema
+  async getMonthlyExpensesByProfile(profileId: string, options?: { 
+    month?: string; 
+    limit?: number; 
+    offset?: number; 
+  }) {
+    try {
+      let query = supabase
+        .from('monthly_expenses')
+        .select(`
+          *,
+          fixed_expenses (
+            id,
+            category,
+            amount,
+            is_credit_card,
+            notes
+          ),
+          debt (
+            id,
+            name,
+            debt_type
+          ),
+          expense_plans (
+            id,
+            plan_name
+          )
+        `)
+        .eq('profile_id', profileId)
+        .order('month', { ascending: false });
+
+      if (options?.month) {
+        const monthDate = new Date(options.month + '-01');
+        const formattedMonth = monthDate.toISOString().split('T')[0];
+        query = query.eq('month', formattedMonth);
+      }
+
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, (options.offset + (options.limit || 10)) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data || [],
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get monthly expenses: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async deleteMonthlyExpense(id: string) {
+    try {
+      const { error } = await supabase
+        .from('monthly_expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        message: 'Monthly expense deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete monthly expense: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Enhanced Monthly Summary with new schema
+  async createMonthlySummary(dto: CreateMonthlySummaryDto) {
+    try {
+      // Convert month string (YYYY-MM) to proper date format for database
+      const monthDate = new Date(dto.month + '-01');
+      const formattedMonth = monthDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      const summaryData = {
+        ...dto,
+        month: formattedMonth,
+      };
+
+      const { data, error } = await supabase
+        .from('monthly_summary')
+        .insert([summaryData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to create monthly summary: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async getMonthlySummariesByProfile(profileId: string, options?: { 
+    limit?: number; 
+    offset?: number; 
+  }) {
+    try {
+      let query = supabase
+        .from('monthly_summary')
+        .select('*')
+        .eq('profile_id', profileId)
+        .order('month', { ascending: false });
+
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, (options.offset + (options.limit || 10)) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data || [],
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get monthly summaries: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Debt Summary
+  async getDebtSummary(profileId: string) {
+    try {
+      const { data: debts, error: debtsError } = await supabase
+        .from('debt')
+        .select('*')
+        .eq('profile_id', profileId);
+
+      if (debtsError) throw debtsError;
+
+      const { data: payments, error: paymentsError } = await supabase
+        .from('debt_payments')
+        .select('*')
+        .eq('profile_id', profileId);
+
+      if (paymentsError) throw paymentsError;
+
+      const totalOutstanding = (debts || []).reduce((sum, debt) => {
+        if (debt.outstanding_balance) {
+          return sum + debt.outstanding_balance;
+        }
+        if (debt.total_due) {
+          return sum + debt.total_due;
+        }
+        return sum;
+      }, 0);
+
+      const totalPayments = (payments || []).reduce((sum, payment) => sum + payment.amount, 0);
+
+      return {
+        success: true,
+        data: {
+          total_debts: debts?.length || 0,
+          total_outstanding: totalOutstanding,
+          total_payments: totalPayments,
+          net_debt: totalOutstanding - totalPayments,
+          debts: debts || [],
+          recent_payments: payments?.slice(0, 5) || [],
+        },
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get debt summary: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Enhanced Misc Expenses with filtering
+  async getMiscExpenses(options?: { 
+    profileId?: string; 
+    month?: string; 
+    limit?: number; 
+    offset?: number; 
+  }) {
+    try {
+      let query = supabase
+        .from('misc_expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (options?.profileId) {
+        query = query.eq('profile_id', options.profileId);
+      }
+
+      if (options?.month) {
+        const monthDate = new Date(options.month + '-01');
+        const formattedMonth = monthDate.toISOString().split('T')[0];
+        query = query.eq('month', formattedMonth);
+      }
+
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      if (options?.offset) {
+        query = query.range(options.offset, (options.offset + (options.limit || 10)) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data || [],
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get misc expenses: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async deleteMiscExpense(id: string) {
+    try {
+      const { error } = await supabase
+        .from('misc_expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        message: 'Misc expense deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete misc expense: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  // Enhanced Debt Management
+  async getDebtById(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('debt')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get debt: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async deleteDebt(id: string) {
+    try {
+      const { error } = await supabase
+        .from('debt')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        message: 'Debt deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete debt: ${error.message}`,
         HttpStatus.BAD_REQUEST,
       );
     }

@@ -1,12 +1,21 @@
-import { IsString, IsNumber, IsOptional, Matches } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateMonthlySummaryDto {
+  @IsOptional()
   @IsString()
-  @Matches(/^\d{4}-\d{2}$/, { message: 'Month must be in YYYY-MM format (e.g., 2024-01)' })
-  month: string;
+  profile_id?: string;
+
+  @IsDateString()
+  month: string; // YYYY-MM format
 
   @IsNumber()
-  salary_inhand: number;
+  total_income: number;
+
+  @IsNumber()
+  total_expenses: number;
+
+  @IsNumber()
+  total_savings: number;
 
   @IsOptional()
   @IsString()
@@ -15,8 +24,24 @@ export class CreateMonthlySummaryDto {
 
 export class UpdateMonthlySummaryDto {
   @IsOptional()
+  @IsString()
+  profile_id?: string;
+
+  @IsOptional()
+  @IsDateString()
+  month?: string; // YYYY-MM format
+
+  @IsOptional()
   @IsNumber()
-  salary_inhand?: number;
+  total_income?: number;
+
+  @IsOptional()
+  @IsNumber()
+  total_expenses?: number;
+
+  @IsOptional()
+  @IsNumber()
+  total_savings?: number;
 
   @IsOptional()
   @IsString()

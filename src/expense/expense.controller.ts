@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -13,14 +14,23 @@ import { ExpenseService } from './expense.service';
 import { AuthGuard } from '../auth/auth.guard';
 import {
   CreateMonthlyExpenseDto,
+  UpdateMonthlyExpenseDto,
   CreateMiscExpenseDto,
-  CreateCreditCardDto,
-  UpdateCreditCardDto,
+  UpdateMiscExpenseDto,
+  CreateDebtDto,
+  UpdateDebtDto,
   CreateMonthlySummaryDto,
+  UpdateMonthlySummaryDto,
   CreatePlanDto,
   SyncPlanDto,
   UpdatePlanDto,
   UpdatePlanActiveStatusDto,
+  CreateFixedExpenseDto,
+  UpdateFixedExpenseDto,
+  CreateDebtPaymentDto,
+  UpdateDebtPaymentDto,
+  CreatePlanItemDto,
+  UpdatePlanItemDto,
 } from './dto';
 
 @Controller('expense')
@@ -52,11 +62,7 @@ export class ExpenseController {
     @Param('month') month: string,
     @Body() dto: CreateMonthlySummaryDto,
   ) {
-    return this.expenseService.generateMonthlySummary(
-      month,
-      dto.salary_inhand,
-      dto.notes,
-    );
+    return this.expenseService.createMonthlySummary(dto);
   }
 
   @Get('summary/:month')
@@ -64,23 +70,23 @@ export class ExpenseController {
     return this.expenseService.getMonthlySummary(month);
   }
 
-  // Credit Cards
-  @Get('credit')
-  async getAllCreditCards() {
-    return this.expenseService.getAllCreditCards();
+  // Debt Management
+  @Get('debt')
+  async getAllDebts() {
+    return this.expenseService.getAllDebts();
   }
 
-  @Post('credit')
-  async createCreditCard(@Body() dto: CreateCreditCardDto) {
-    return this.expenseService.createCreditCard(dto);
+  @Post('debt')
+  async createDebt(@Body() dto: CreateDebtDto) {
+    return this.expenseService.createDebt(dto);
   }
 
-  @Patch('credit/:id')
-  async updateCreditCard(
+  @Patch('debt/:id')
+  async updateDebt(
     @Param('id') id: string,
-    @Body() dto: UpdateCreditCardDto,
+    @Body() dto: UpdateDebtDto,
   ) {
-    return this.expenseService.updateCreditCard(id, dto);
+    return this.expenseService.updateDebt(id, dto);
   }
 
   // Expense Planning
@@ -135,5 +141,195 @@ export class ExpenseController {
   @Get('plan/:id/variance-history')
   async getPlanVarianceHistory(@Param('id') id: string) {
     return this.expenseService.getPlanVarianceHistory(id);
+  }
+
+  // Fixed Expenses
+  @Post('fixed-expenses')
+  async createFixedExpense(@Body() dto: CreateFixedExpenseDto) {
+    return this.expenseService.createFixedExpense(dto);
+  }
+
+  @Get('fixed-expenses')
+  async getFixedExpenses(
+    @Query('profileId') profileId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const options = {
+      profileId,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    };
+    return this.expenseService.getFixedExpenses(options);
+  }
+
+  @Patch('fixed-expenses/:id')
+  async updateFixedExpense(
+    @Param('id') id: string,
+    @Body() dto: UpdateFixedExpenseDto,
+  ) {
+    return this.expenseService.updateFixedExpense(id, dto);
+  }
+
+  @Delete('fixed-expenses/:id')
+  async deleteFixedExpense(@Param('id') id: string) {
+    return this.expenseService.deleteFixedExpense(id);
+  }
+
+  // Enhanced Monthly Expenses
+  @Get('monthly-expenses')
+  async getMonthlyExpensesByProfile(
+    @Query('profileId') profileId: string,
+    @Query('month') month?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const options = {
+      month,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    };
+    return this.expenseService.getMonthlyExpensesByProfile(profileId, options);
+  }
+
+  @Patch('monthly-expenses/:id')
+  async updateMonthlyExpense(
+    @Param('id') id: string,
+    @Body() dto: UpdateMonthlyExpenseDto,
+  ) {
+    return this.expenseService.updateMonthlyExpense(id, dto);
+  }
+
+  @Delete('monthly-expenses/:id')
+  async deleteMonthlyExpense(@Param('id') id: string) {
+    return this.expenseService.deleteMonthlyExpense(id);
+  }
+
+  // Enhanced Misc Expenses
+  @Get('misc-expenses')
+  async getMiscExpenses(
+    @Query('profileId') profileId?: string,
+    @Query('month') month?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const options = {
+      profileId,
+      month,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    };
+    return this.expenseService.getMiscExpenses(options);
+  }
+
+  @Patch('misc-expenses/:id')
+  async updateMiscExpense(
+    @Param('id') id: string,
+    @Body() dto: UpdateMiscExpenseDto,
+  ) {
+    return this.expenseService.updateMiscExpense(id, dto);
+  }
+
+  @Delete('misc-expenses/:id')
+  async deleteMiscExpense(@Param('id') id: string) {
+    return this.expenseService.deleteMiscExpense(id);
+  }
+
+  // Debt Payments
+  @Post('debt-payments')
+  async createDebtPayment(@Body() dto: CreateDebtPaymentDto) {
+    return this.expenseService.createDebtPayment(dto);
+  }
+
+  @Get('debt-payments')
+  async getDebtPayments(
+    @Query('debtId') debtId?: string,
+    @Query('profileId') profileId?: string,
+    @Query('month') month?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const options = {
+      debtId: debtId ? parseInt(debtId, 10) : undefined,
+      profileId,
+      month,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    };
+    return this.expenseService.getDebtPayments(options);
+  }
+
+  @Patch('debt-payments/:id')
+  async updateDebtPayment(
+    @Param('id') id: string,
+    @Body() dto: UpdateDebtPaymentDto,
+  ) {
+    return this.expenseService.updateDebtPayment(id, dto);
+  }
+
+  @Delete('debt-payments/:id')
+  async deleteDebtPayment(@Param('id') id: string) {
+    return this.expenseService.deleteDebtPayment(id);
+  }
+
+  // Plan Items Management
+  @Post('plan/:expensePlanId/item')
+  async createPlanItem(
+    @Param('expensePlanId') expensePlanId: string,
+    @Body() dto: CreatePlanItemDto,
+  ) {
+    return this.expenseService.createPlanItem(expensePlanId, dto);
+  }
+
+  @Patch('plan/item/:id')
+  async updatePlanItem(
+    @Param('id') id: string,
+    @Body() dto: UpdatePlanItemDto,
+  ) {
+    return this.expenseService.updatePlanItem(id, dto);
+  }
+
+  @Delete('plan/item/:id')
+  async deletePlanItem(@Param('id') id: string) {
+    return this.expenseService.deletePlanItem(id);
+  }
+
+  // Enhanced Monthly Summary
+  @Get('summaries')
+  async getMonthlySummariesByProfile(
+    @Query('profileId') profileId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const options = {
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    };
+    return this.expenseService.getMonthlySummariesByProfile(profileId, options);
+  }
+
+  @Patch('summary/:month')
+  async updateMonthlySummary(
+    @Param('month') month: string,
+    @Body() dto: UpdateMonthlySummaryDto,
+  ) {
+    return this.expenseService.updateMonthlySummary(month, dto);
+  }
+
+  // Debt Summary
+  @Get('debt/summary')
+  async getDebtSummary(@Query('profileId') profileId: string) {
+    return this.expenseService.getDebtSummary(profileId);
+  }
+
+  // Enhanced Debt Management
+  @Get('debt/:id')
+  async getDebtById(@Param('id') id: string) {
+    return this.expenseService.getDebtById(id);
+  }
+
+  @Delete('debt/:id')
+  async deleteDebt(@Param('id') id: string) {
+    return this.expenseService.deleteDebt(id);
   }
 } 

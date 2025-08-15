@@ -1,7 +1,7 @@
-import { IsString, IsNumber, IsArray, IsOptional, ValidateNested, IsBoolean, Matches } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString, IsArray, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class PlannedExpenseItemDto {
+export class CreatePlanItemDto {
   @IsString()
   category: string;
 
@@ -9,41 +9,61 @@ export class PlannedExpenseItemDto {
   planned_amount: number;
 }
 
-export class CreatePlanDto {
+export class UpdatePlanItemDto {
+  @IsOptional()
   @IsString()
-  @Matches(/^\d{4}-\d{2}$/, { message: 'Month must be in YYYY-MM format (e.g., 2024-01)' })
-  month: string;
+  category?: string;
+
+  @IsOptional()
+  @IsNumber()
+  planned_amount?: number;
+}
+
+export class CreatePlanDto {
+  @IsOptional()
+  @IsString()
+  profile_id?: string;
+
+  @IsDateString()
+  month: string; // YYYY-MM format
 
   @IsString()
   plan_name: string;
 
   @IsOptional()
-  @IsString()
-  version?: string;
+  @IsNumber()
+  version?: number;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PlannedExpenseItemDto)
-  items: PlannedExpenseItemDto[];
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 
   @IsOptional()
   @IsString()
   notes?: string;
-}
 
-export class SyncPlanDto {
-  @IsString()
-  @Matches(/^\d{4}-\d{2}$/, { message: 'Month must be in YYYY-MM format (e.g., 2024-01)' })
-  month: string;
-
-  @IsString()
-  prompt: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePlanItemDto)
+  items: CreatePlanItemDto[];
 }
 
 export class UpdatePlanDto {
   @IsOptional()
   @IsString()
+  profile_id?: string;
+
+  @IsOptional()
+  @IsDateString()
+  month?: string; // YYYY-MM format
+
+  @IsOptional()
+  @IsString()
   plan_name?: string;
+
+  @IsOptional()
+  @IsNumber()
+  version?: number;
 
   @IsOptional()
   @IsBoolean()
@@ -57,4 +77,13 @@ export class UpdatePlanDto {
 export class UpdatePlanActiveStatusDto {
   @IsBoolean()
   is_active: boolean;
+}
+
+export class SyncPlanDto {
+  @IsDateString()
+  month: string; // YYYY-MM format
+
+  @IsOptional()
+  @IsString()
+  prompt?: string;
 } 

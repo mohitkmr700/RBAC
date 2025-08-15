@@ -1,12 +1,8 @@
-import { IsString, IsNumber, IsOptional, IsUUID, Matches } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString, IsBoolean, IsUUID } from 'class-validator';
 
 export class CreateMonthlyExpenseDto {
-  @IsString()
-  @Matches(/^\d{4}-\d{2}$/, { message: 'Month must be in YYYY-MM format (e.g., 2024-01)' })
-  month: string;
-
-  @IsUUID()
-  fixed_expense_id: string;
+  @IsDateString()
+  month: string; // YYYY-MM-DD format
 
   @IsNumber()
   actual_paid: number;
@@ -14,9 +10,33 @@ export class CreateMonthlyExpenseDto {
   @IsOptional()
   @IsString()
   remarks?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  exclude_from_tracking?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  profile_id?: string;
+
+  @IsOptional()
+  @IsNumber()
+  expense_plan_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  debt_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  fixed_expense_id?: number;
 }
 
 export class UpdateMonthlyExpenseDto {
+  @IsOptional()
+  @IsDateString()
+  month?: string; // YYYY-MM-DD format
+
   @IsOptional()
   @IsNumber()
   actual_paid?: number;
@@ -24,4 +44,24 @@ export class UpdateMonthlyExpenseDto {
   @IsOptional()
   @IsString()
   remarks?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  exclude_from_tracking?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  profile_id?: string;
+
+  @IsOptional()
+  @IsNumber()
+  expense_plan_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  debt_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  fixed_expense_id?: number;
 } 
